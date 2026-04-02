@@ -1,0 +1,316 @@
+# ============================================================
+# NatyaVeda — Dance Form & Mudra (Hasta) Taxonomy
+# ============================================================
+
+# ──────────────────────────────────────────────────────────────
+# 8 Indian Classical Dance Forms
+# ──────────────────────────────────────────────────────────────
+dance_forms:
+  0:
+    name: bharatanatyam
+    display: "Bharatanatyam"
+    origin: "Tamil Nadu"
+    body_style: "angular_geometric"    # helps the classifier
+    hallmarks: ["aramandi", "abhinaya", "nritta", "nritya"]
+    music: ["carnatic", "mridangam", "nattuvangam"]
+    youtube_search_terms:
+      - "Bharatanatyam solo stage performance"
+      - "Bharatanatyam varnam recital"
+
+  1:
+    name: kathak
+    display: "Kathak"
+    origin: "North India (UP, Jaipur, Lucknow)"
+    body_style: "upright_spins"
+    hallmarks: ["chakkar", "tatkar", "thumri", "tatkaar"]
+    music: ["tabla", "sitar", "bansuri"]
+
+  2:
+    name: odissi
+    display: "Odissi"
+    origin: "Odisha"
+    body_style: "tribhangi_curves"
+    hallmarks: ["tribhangi", "chauka", "mangalacharan", "pallavi"]
+    music: ["mardala", "harmonium", "odissi_vocal"]
+
+  3:
+    name: kuchipudi
+    display: "Kuchipudi"
+    origin: "Andhra Pradesh"
+    body_style: "drama_expressive"
+    hallmarks: ["tarangam", "brass_plate_dance", "jatiswaram"]
+    music: ["carnatic", "mridangam", "kuchipudi_vocal"]
+
+  4:
+    name: manipuri
+    display: "Manipuri"
+    origin: "Manipur"
+    body_style: "gentle_flowing"
+    hallmarks: ["ras_lila", "sankirtana", "pung_cholom"]
+    music: ["pung", "kartal", "harmonium"]
+
+  5:
+    name: mohiniyattam
+    display: "Mohiniyattam"
+    origin: "Kerala"
+    body_style: "lasya_swaying"
+    hallmarks: ["lasya", "ekaharya", "cholkettu", "jatiswaram"]
+    music: ["sopana_sangeet", "edakka", "veena"]
+
+  6:
+    name: sattriya
+    display: "Sattriya"
+    origin: "Assam"
+    body_style: "devotional_rhythmic"
+    hallmarks: ["ankia_naat", "vaishnava", "ojapali"]
+    music: ["khol", "cymbals", "borgeet"]
+
+  7:
+    name: kathakali
+    display: "Kathakali"
+    origin: "Kerala"
+    body_style: "elaborate_expressive"
+    hallmarks: ["navarasas", "elaborate_makeup", "pacha", "kathi"]
+    music: ["chenda", "maddalam", "ilathalam"]
+
+# ──────────────────────────────────────────────────────────────
+# Mudra (Hasta) Classification — 28 Hastas
+# Based on Natyashastra & Abhinaya Darpana
+# ──────────────────────────────────────────────────────────────
+
+# Asamyuta Hastas (single-hand gestures) — 28 total
+asamyuta_hastas:
+  0:
+    name: pataka
+    display: "Pataka (Flag)"
+    description: "Four fingers extended, thumb bent"
+    meanings: ["cloud", "forest", "rain", "night"]
+
+  1:
+    name: tripataka
+    display: "Tripataka (Three parts of flag)"
+    description: "Ring finger bent, others extended"
+    meanings: ["crown", "tree", "sword"]
+
+  2:
+    name: ardhapataka
+    display: "Ardhapataka (Half flag)"
+    description: "Index and middle fingers extended together"
+    meanings: ["knife", "two", "banana"]
+
+  3:
+    name: kartarimukha
+    display: "Kartarimukha (Scissor face)"
+    description: "Index and ring fingers extended, middle bent"
+    meanings: ["quarrel", "deer's eye", "lightning"]
+
+  4:
+    name: mayura
+    display: "Mayura (Peacock)"
+    description: "Thumb and index finger pinch, others spread"
+    meanings: ["peacock", "cheek", "rain"]
+
+  5:
+    name: ardhachandra
+    display: "Ardhachandra (Half moon)"
+    description: "All fingers extended and spread apart, thumb out"
+    meanings: ["moon", "waist", "spear"]
+
+  6:
+    name: arala
+    display: "Arala (Bent)"
+    description: "Index finger bent backward"
+    meanings: ["Saraswati", "drinking water"]
+
+  7:
+    name: shukatunda
+    display: "Shukatunda (Parrot's beak)"
+    description: "Index finger curved, others closed"
+    meanings: ["arrow", "shooting"]
+
+  8:
+    name: mushti
+    display: "Mushti (Fist)"
+    description: "All fingers folded into fist"
+    meanings: ["wrestling", "strength", "holding"]
+
+  9:
+    name: shikhara
+    display: "Shikhara (Spire)"
+    description: "Thumb raised from fist"
+    meanings: ["bow", "pillar", "husband"]
+
+  10:
+    name: kapittha
+    display: "Kapittha (Elephant apple)"
+    description: "Thumb and middle finger touch"
+    meanings: ["Lakshmi", "holding", "milk"]
+
+  11:
+    name: katakamukha
+    display: "Katakamukha (Broken circle)"
+    description: "Index and middle fingers extended, others curved"
+    meanings: ["plucking flowers", "wearing garland"]
+
+  12:
+    name: suchi
+    display: "Suchi (Needle)"
+    description: "Index finger pointed upward"
+    meanings: ["one", "number", "threatening"]
+
+  13:
+    name: chandrakala
+    display: "Chandrakala (Moon digit)"
+    description: "Thumb and index form crescent"
+    meanings: ["moon on Shiva's head"]
+
+  14:
+    name: padmakosha
+    display: "Padmakosha (Lotus bud)"
+    description: "All fingers spread and curved downward"
+    meanings: ["lotus", "ball", "round fruit"]
+
+  15:
+    name: sarpashirsha
+    display: "Sarpashirsha (Snake head)"
+    description: "All fingers together, bent at middle joint"
+    meanings: ["snake", "wave", "sandal paste"]
+
+  16:
+    name: mrigashirsha
+    display: "Mrigashirsha (Deer head)"
+    description: "Pinky and ring fingers bent, others extended"
+    meanings: ["deer", "woman", "fear"]
+
+  17:
+    name: simhamukha
+    display: "Simhamukha (Lion face)"
+    description: "Thumb, index, and pinky extended"
+    meanings: ["lion", "owl"]
+
+  18:
+    name: kangula
+    display: "Kangula (Bell)"
+    description: "Thumb and ring finger touch, others extended"
+    meanings: ["fruit", "bell"]
+
+  19:
+    name: alapadma
+    display: "Alapadma (Full-blown lotus)"
+    description: "All five fingers spread wide"
+    meanings: ["lotus in full bloom", "beauty"]
+
+  20:
+    name: chatura
+    display: "Chatura (Clever)"
+    description: "Four fingers close, thumb tucked"
+    meanings: ["clever", "musk", "gold", "wind"]
+
+  21:
+    name: bhramara
+    display: "Bhramara (Bee)"
+    description: "Index on thumb, middle curved, others extended"
+    meanings: ["bee", "parrot"]
+
+  22:
+    name: hamsasya
+    display: "Hamsasya (Swan beak)"
+    description: "All five fingertips touch"
+    meanings: ["swan", "thread", "needle"]
+
+  23:
+    name: hamsapaksha
+    display: "Hamsapaksha (Swan wing)"
+    description: "Four fingers together with thumb separate"
+    meanings: ["count six", "offer water"]
+
+  24:
+    name: sandamsha
+    display: "Sandamsha (Tongs)"
+    description: "Index and middle fingers pinching"
+    meanings: ["holding flower", "tongs"]
+
+  25:
+    name: mukula
+    display: "Mukula (Bud)"
+    description: "All fingertips together pointing up"
+    meanings: ["lotus bud", "eating", "flower offering"]
+
+  26:
+    name: tamrachuda
+    display: "Tamrachuda (Red crested)"
+    description: "Index curves down from pataka"
+    meanings: ["cock", "flow of river"]
+
+  27:
+    name: trishula
+    display: "Trishula (Trident)"
+    description: "Index, middle, ring fingers spread"
+    meanings: ["Shiva's trident", "three"]
+
+# Samyuta Hastas (two-hand gestures) — 24 total (abbreviated)
+samyuta_hastas:
+  - anjali       # salutation
+  - kapota       # modesty, agreement
+  - karkata      # stiff, rough texture
+  - swastika     # crossroads, forest
+  - dola         # arms hanging down
+  - pushpaputa   # collecting flowers
+  - utsanga      # embrace
+  - shivalinga   # Shiva worship
+  - katakavardhana  # coronation, prosperity
+  - kartariswastika # birds, fighting
+  - shakata      # demon, buffaloe
+  - shankha      # conch shell
+  - chakra       # discus
+  - samputa      # box, secret
+  - pasha        # bond, rope
+  - kilaka       # friendship
+  - matsya       # fish
+  - kurma        # tortoise
+  - varaha       # boar
+  - garuda       # eagle
+  - nagabandha   # serpent coil
+  - bherunda     # pair of birds
+  - avahittha    # concealment
+  - vajra        # thunderbolt
+
+# ──────────────────────────────────────────────────────────────
+# Body Part Keypoint Index Map (COCO WholeBody — 133 pts)
+# ──────────────────────────────────────────────────────────────
+keypoint_groups:
+  body:            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+  foot:            [17, 18, 19, 20, 21, 22]
+  face:            [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+                    37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+                    51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+                    65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78,
+                    79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90]
+  left_hand:       [91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
+                    104, 105, 106, 107, 108, 109, 110, 111]
+  right_hand:      [112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122,
+                    123, 124, 125, 126, 127, 128, 129, 130, 131, 132]
+
+# Hand keypoint names (MediaPipe 21-point format — same for both hands)
+hand_keypoints:
+  0: wrist
+  1: thumb_cmc
+  2: thumb_mcp
+  3: thumb_ip
+  4: thumb_tip
+  5: index_finger_mcp
+  6: index_finger_pip
+  7: index_finger_dip
+  8: index_finger_tip
+  9: middle_finger_mcp
+  10: middle_finger_pip
+  11: middle_finger_dip
+  12: middle_finger_tip
+  13: ring_finger_mcp
+  14: ring_finger_pip
+  15: ring_finger_dip
+  16: ring_finger_tip
+  17: pinky_mcp
+  18: pinky_pip
+  19: pinky_dip
+  20: pinky_tip

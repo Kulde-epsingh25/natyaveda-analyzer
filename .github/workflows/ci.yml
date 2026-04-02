@@ -1,0 +1,72 @@
+name: NatyaVeda CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install CPU-only PyTorch
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install core dependencies (no MMPose/TF for CI speed)
+        run: |
+          pip install numpy scipy scikit-learn opencv-python-headless \
+                      pyyaml einops pytest pytest-cov transformers \
+                      mediapipe Pillow
+
+      - name: Install package (no extras)
+        run: pip install -e . --no-deps
+
+      - name: Run unit tests
+        run: |
+          pytest tests/test_all.py \
+            -v \
+            --tb=short \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -k "not requires_mmpose and not requires_tensorflow" \
+            --ignore=scripts
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install linters
+        run: pip install black isort flake8
+      - name: Check formatting (black)
+        run: black --check --diff src/ tests/ scripts/
+      - name: Check imports (isort)
+        run: isort --check-only src/ tests/ scripts/
+      - name: Lint (flake8)
+        run: flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503

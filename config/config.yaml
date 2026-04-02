@@ -1,0 +1,269 @@
+# ============================================================
+# NatyaVeda Analyzer — Main Configuration
+# ============================================================
+
+project:
+  name: natyaveda-analyzer
+  version: "1.0.0"
+  description: "Indian Classical Dance Recognition System"
+  seed: 42
+
+# ──────────────────────────────────────────────────────────────
+# DATA COLLECTION
+# ──────────────────────────────────────────────────────────────
+data_collection:
+  youtube:
+    cookies_file: null             # optional, for age-restricted
+    proxy: null
+    max_retries: 3
+    rate_limit_kbps: 5000
+    preferred_format: "bestvideo[height>=720]+bestaudio/best"
+    output_template: "%(title)s_%(id)s.%(ext)s"
+
+  per_dance_queries:               # refined search queries
+    bharatanatyam:
+      - "Bharatanatyam performance solo stage full"
+      - "Bharatanatyam arangetram recital"
+      - "Bharatanatyam varnam full performance"
+    kathak:
+      - "Kathak solo performance stage full"
+      - "Kathak thumri tarana recital"
+      - "Kathak chakkar tatkar performance"
+    odissi:
+      - "Odissi classical dance performance"
+      - "Odissi Pallavi Mangalacharan full"
+      - "Odissi tribhangi solo recital"
+    kuchipudi:
+      - "Kuchipudi classical dance performance"
+      - "Kuchipudi tarangam performance"
+      - "Kuchipudi drama solo recital"
+    manipuri:
+      - "Manipuri Ras Lila performance"
+      - "Manipuri classical dance solo"
+      - "Manipuri Sankirtana performance"
+    mohiniyattam:
+      - "Mohiniyattam classical dance Kerala"
+      - "Mohiniyattam solo full performance"
+      - "Mohiniyattam recital stage"
+    sattriya:
+      - "Sattriya dance Assam performance"
+      - "Sattriya classical dance recital"
+      - "Sattriya solo performance stage"
+    kathakali:
+      - "Kathakali full performance story"
+      - "Kathakali solo character full"
+      - "Kathakali Navarasas expression"
+
+  filters:
+    min_duration_sec: 60
+    max_duration_sec: 1200
+    min_views: 1000
+    max_videos_per_query: 30
+
+# ──────────────────────────────────────────────────────────────
+# VIDEO PREPROCESSING & REFINEMENT
+# ──────────────────────────────────────────────────────────────
+preprocessing:
+  video:
+    target_fps: 25
+    target_resolution: [640, 480]   # [W, H] — keep aspect ratio
+    stabilize: true                  # ECC-based stabilization
+
+  dance_isolation:
+    detector: "rt-detr-l"           # person detector
+    tracker: "bytetrack"
+    scene_detector: "content"       # PySceneDetect mode
+    min_scene_duration_sec: 3.0
+    min_dance_confidence: 0.65      # ActivityNet classifier threshold
+    principal_dancer:
+      strategy: "largest_bbox"      # largest | center | manual
+      min_bbox_fraction: 0.15       # dancer must be ≥15% of frame
+    drop_low_motion: true
+    motion_threshold: 0.005         # mean optical flow magnitude
+
+  keypoint_gating:
+    min_avg_confidence: 0.40        # drop frames below this
+    min_visible_body_keypoints: 10  # of 17 body keypoints
+    min_visible_hand_keypoints: 12  # of 21 per hand
+
+# ──────────────────────────────────────────────────────────────
+# FEATURE EXTRACTION
+# ──────────────────────────────────────────────────────────────
+feature_extraction:
+  # Primary whole-body pose model
+  pose_model:
+    name: "rtmw-x"                  # rtmw-x | rtmw-l | movenet-thunder
+    config: "td-hm_rtmw-x_8xb2-270e_coco-wholebody-384x288"
+    checkpoint: "weights/rtmw-x_simcc-cocktail14_pt-ucoco_270e-384x288-f840f204_20231122.pth"
+    keypoints: 133                  # COCO WholeBody format
+    device: "cuda"
+    batch_frames: 16
+
+  # Fallback / supplementary body pose
+  movenet:
+    enabled: true                   # use as fallback when rtmw confidence low
+    model_url: "https://tfhub.dev/google/movenet/singlepose/thunder/4"
+    keypoints: 17
+
+  # Dedicated hand model for finer mudra detail
+  hand_model:
+    name: "mediapipe"               # mediapipe | rtmw_hands
+    mediapipe:
+      model_complexity: 1           # 0 | 1 (heavier, more accurate)
+      min_detection_confidence: 0.5
+      min_tracking_confidence: 0.5
+      keypoints_per_hand: 21        # wrist + 4×4 finger joints + 4 tips
+    fusion_strategy: "confidence_weighted"  # use both rtmw + mediapipe
+
+  # Video-level token features (VideoMAE-v2)
+  video_tokens:
+    enabled: true
+    model: "MCG-NJU/videomae-large"
+    clip_frames: 16                 # frames per clip for VideoMAE
+    stride: 8                       # sliding window stride
+    feature_dim: 1024
+
+  # Normalization
+  normalization:
+    strategy: "hip_centered"        # center on hip midpoint
+    scale_by: "torso_height"        # normalize by hip→shoulder dist
+    coordinate_system: "relative"   # relative to body center
+
+  output:
+    format: "npz"
+    include_raw_coords: true
+    include_confidence: true
+    include_velocities: true        # first-order temporal diff
+    include_accelerations: true     # second-order temporal diff
+
+# ──────────────────────────────────────────────────────────────
+# DATASET SPLITS
+# ──────────────────────────────────────────────────────────────
+dataset:
+  clip_length_frames: 64            # frames per training clip
+  clip_stride_frames: 32            # stride for sliding window
+  train_ratio: 0.80
+  val_ratio: 0.10
+  test_ratio: 0.10
+  stratify_by: ["dance_form", "performer_gender"]
+  augmentation:
+    enabled: true
+    random_crop_frames: true
+    random_flip: true               # mirror (left-right swap)
+    random_rotation_deg: 15
+    random_scale: [0.9, 1.1]
+    temporal_jitter: 3              # ±3 frames
+    keypoint_noise_std: 0.01        # Gaussian noise on coords
+
+# ──────────────────────────────────────────────────────────────
+# MODEL
+# ──────────────────────────────────────────────────────────────
+model:
+  name: "danceformer-large"
+  # Pose Embedding
+  pose_embed_dim: 256
+  pose_embed_dropout: 0.1
+  # Temporal Transformer
+  num_transformer_layers: 8
+  num_attention_heads: 8
+  ff_dim: 1024
+  transformer_dropout: 0.1
+  max_sequence_length: 128
+  # VideoMAE token fusion
+  videomae_fusion: true
+  videomae_proj_dim: 256
+  # Classification Heads
+  num_dance_classes: 8
+  num_mudra_classes: 28            # Samyuta + Asamyuta hastas
+  # Loss weights
+  dance_loss_weight: 1.0
+  mudra_loss_weight: 0.4
+
+# ──────────────────────────────────────────────────────────────
+# TRAINING
+# ──────────────────────────────────────────────────────────────
+training:
+  epochs: 100
+  batch_size: 32
+  num_workers: 8
+  pin_memory: true
+
+  optimizer:
+    name: "adamw"
+    lr: 1.0e-4
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+
+  scheduler:
+    name: "cosine_warmup"
+    warmup_epochs: 10
+    min_lr: 1.0e-6
+
+  loss:
+    dance_cls: "focal"             # focal | cross_entropy
+    focal_gamma: 2.0
+    focal_alpha: 0.25
+    mudra_cls: "cross_entropy"
+    label_smoothing: 0.1
+
+  ema:
+    enabled: true
+    decay: 0.999
+
+  gradient:
+    clip_norm: 1.0
+    accumulation_steps: 1
+
+  checkpointing:
+    save_every_n_epochs: 5
+    save_best_metric: "val_f1_weighted"
+    keep_last_n: 3
+
+  logging:
+    use_wandb: true
+    project: "natyaveda-analyzer"
+    log_every_n_steps: 50
+
+# ──────────────────────────────────────────────────────────────
+# EVALUATION
+# ──────────────────────────────────────────────────────────────
+evaluation:
+  metrics:
+    - accuracy
+    - f1_weighted
+    - f1_per_class
+    - confusion_matrix
+    - roc_auc
+    - mudra_accuracy
+  test_time_augmentation: true
+  tta_flips: true
+  temporal_ensemble: true          # average predictions over sliding window
+
+# ──────────────────────────────────────────────────────────────
+# INFERENCE
+# ──────────────────────────────────────────────────────────────
+inference:
+  sliding_window_frames: 64
+  sliding_window_stride: 16
+  min_segment_duration_sec: 2.0
+  confidence_threshold: 0.6
+  visualize:
+    skeleton: true
+    skeleton_color_by_confidence: true
+    show_dance_label: true
+    show_mudra_label: true
+    show_confidence_bar: true
+    overlay_alpha: 0.7
+
+# ──────────────────────────────────────────────────────────────
+# PATHS
+# ──────────────────────────────────────────────────────────────
+paths:
+  data_raw: "data/raw"
+  data_refined: "data/refined"
+  data_processed: "data/processed"
+  data_splits: "data/splits"
+  weights: "weights"
+  logs: "logs"
+  reports: "reports"
+  outputs: "outputs"

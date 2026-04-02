@@ -1,0 +1,3 @@
+# This folder holds pretrained model weights.
+# Weights are excluded from git via .gitignore (too large).
+# Run: python scripts/download_weights.py  to populate this folder.
