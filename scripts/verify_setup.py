@@ -1,94 +1,115 @@
 """
-NatyaVeda — Setup Verification
-Checks all dependencies, model components, and runs a quick forward pass.
+NatyaVeda v2 — Environment Verification
+Checks all dependencies, GPU tier selection, and runs a forward pass.
 """
-
+import logging
+import subprocess
 import sys
-import traceback
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+logging.basicConfig(level=logging.WARNING)
 
 PASS = "  ✅"
-FAIL = "  ❌"
 WARN = "  ⚠️ "
-
+FAIL = "  ❌"
 results = []
 
 
-def check(name, fn):
+def check(name, fn, warn_ok=False):
     try:
-        fn()
-        results.append((PASS, name))
+        msg = fn()
+        results.append((PASS, f"{name}" + (f" — {msg}" if msg else "")))
     except Exception as e:
-        results.append((FAIL, f"{name}: {e}"))
+        icon = WARN if warn_ok else FAIL
+        results.append((icon, f"{name}: {e}"))
 
 
-# ── Core dependencies
-check("PyTorch",          lambda: __import__("torch"))
-check("NumPy",            lambda: __import__("numpy"))
-check("OpenCV",           lambda: __import__("cv2"))
-check("scikit-learn",     lambda: __import__("sklearn"))
-check("Transformers (HF)",lambda: __import__("transformers"))
-check("MediaPipe",        lambda: __import__("mediapipe"))
-check("PyYAML",           lambda: __import__("yaml"))
-check("yt-dlp",           lambda: __import__("yt_dlp"))
-check("einops",           lambda: __import__("einops"))
+# ── Core packages ───────────────────────────────────────────────
+check("setuptools < 81",  lambda: (
+    __import__("setuptools"),
+    v := __import__("setuptools").__version__,
+    (_ for _ in ()).throw(RuntimeError(f"version {v} ≥ 81 — will break mmcv!")) if int(v.split(".")[0]) >= 81 else v
+)[-1])
 
-# ── MMPose (optional but primary)
-check("MMEngine",         lambda: __import__("mmengine"))
-check("MMCV",             lambda: __import__("mmcv"))
-check("MMDet",            lambda: __import__("mmdet"))
-check("MMPose",           lambda: __import__("mmpose"))
+check("PyTorch",          lambda: __import__("torch").__version__)
+check("TorchVision",      lambda: __import__("torchvision").__version__)
+check("NumPy <2.0",       lambda: (v := __import__("numpy").__version__,
+                                   _ if int(v.split(".")[0]) < 2 else None, v)[2])
+check("OpenCV Headless",  lambda: __import__("cv2").__version__)
+check("scikit-learn",     lambda: __import__("sklearn").__version__)
+check("Transformers",     lambda: __import__("transformers").__version__)
+check("HuggingFace Hub",  lambda: __import__("huggingface_hub").__version__)
+check("MediaPipe",        lambda: __import__("mediapipe").__version__)
+check("TensorFlow",       lambda: __import__("tensorflow").__version__)
+check("TF Hub",           lambda: __import__("tensorflow_hub").__version__)
+check("PySceneDetect",    lambda: __import__("scenedetect").__version__)
+check("yt-dlp",           lambda: __import__("yt_dlp").version.__version__)
+check("einops",           lambda: __import__("einops").__version__)
+check("wandb",            lambda: __import__("wandb").__version__)
 
-# ── TensorFlow / TF Hub (for MoveNet)
-check("TensorFlow",       lambda: __import__("tensorflow"))
-check("TF Hub",           lambda: __import__("tensorflow_hub"))
+# ── MMPose stack ────────────────────────────────────────────────
+check("MMEngine",         lambda: __import__("mmengine").__version__)
+check("MMCV",             lambda: __import__("mmcv").__version__)
+check("MMDet",            lambda: __import__("mmdet").__version__)
+check("MMPose (RTMW-x)",  lambda: __import__("mmpose").__version__)
 
-# ── Scene detection
-check("PySceneDetect",    lambda: __import__("scenedetect"))
+# ── VitPose ─────────────────────────────────────────────────────
+def check_vitpose():
+    from transformers import VitPoseForPoseEstimation
+    return "VitPose-Plus available via transformers"
+check("VitPose-Plus (HF)", check_vitpose)
 
-# ── Project modules
-check("DanceFormer model", lambda: (
-    sys.path.insert(0, "."),
-    __import__("src.models.danceformer", fromlist=["DanceFormer"])
-))
-
-# ── Quick model forward pass
-def _quick_forward():
+# ── GPU ─────────────────────────────────────────────────────────
+def check_cuda():
     import torch
-    sys.path.insert(0, ".")
+    if torch.cuda.is_available():
+        name = torch.cuda.get_device_name(0)
+        vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        return f"{name} ({vram:.1f} GB)"
+    r = subprocess.run("nvidia-smi -L", shell=True, capture_output=True, text=True)
+    if r.returncode == 0:
+        raise RuntimeError("GPU present but container lacks --gpus flag → run: docker run --gpus all")
+    return "No GPU — CPU mode active"
+check("CUDA GPU", check_cuda, warn_ok=True)
+
+# ── DeviceManager ───────────────────────────────────────────────
+def check_device_manager():
+    from src.utils.device import DeviceManager
+    dm = DeviceManager()
+    return dm.summary()
+check("DeviceManager", check_device_manager)
+
+# ── DanceFormer model ───────────────────────────────────────────
+def check_danceformer():
+    import torch
     from src.models.danceformer import danceformer_small
-    model = danceformer_small()
-    kpts = torch.randn(1, 32, 399)
-    out = model(kpts)
-    assert out["dance_logits"].shape == (1, 8)
-    assert out["mudra_logits"].shape == (1, 32, 28)
+    m = danceformer_small()
+    x = torch.randn(2, 32, 399)
+    o = m(x)
+    assert o["dance_logits"].shape == (2, 8)
+    assert o["mudra_logits"].shape == (2, 32, 28)
+    return f"dance{list(o['dance_logits'].shape)} mudra{list(o['mudra_logits'].shape)}"
+check("DanceFormer forward pass", check_danceformer)
 
-check("DanceFormer forward pass", _quick_forward)
-
-# ── CUDA
-def _cuda_check():
-    import torch
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA not available — GPU training unavailable (CPU mode works)")
-
-check("CUDA GPU", _cuda_check)
-
-# ── Print summary
-print("\n" + "=" * 60)
-print("  NatyaVeda — Environment Check")
-print("=" * 60)
+# ── Print results ────────────────────────────────────────────────
+print("\n" + "="*65)
+print("  NatyaVeda Analyzer v2 — Environment Check")
+print("="*65)
 for icon, msg in results:
     print(f"{icon} {msg}")
 
-n_pass = sum(1 for icon, _ in results if "✅" in icon)
-n_fail = sum(1 for icon, _ in results if "❌" in icon)
-print("=" * 60)
-print(f"  {n_pass} passed  |  {n_fail} failed")
-if n_fail == 0:
-    print("  ✅ All checks passed — ready to train!")
-elif n_fail <= 2:
-    print("  ⚠️  Some optional dependencies missing — core pipeline should work.")
+passed = sum(1 for icon, _ in results if "✅" in icon)
+warned = sum(1 for icon, _ in results if "⚠️" in icon)
+failed = sum(1 for icon, _ in results if "❌" in icon)
+
+print("="*65)
+print(f"  {passed} passed  |  {warned} warnings  |  {failed} failed")
+
+if failed == 0:
+    print("  ✅ All checks passed — ready to run!")
+elif failed <= 2:
+    print("  ⚠️  Minor issues — check warnings above")
 else:
-    print("  ❌ Critical dependencies missing — run: pip install -e '.[dev]'")
+    print("  ❌ Critical failures — run: python scripts/install.py")
+print("="*65 + "\n")
