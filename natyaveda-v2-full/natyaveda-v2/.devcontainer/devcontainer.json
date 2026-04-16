@@ -1,0 +1,65 @@
+{
+  "name": "NatyaVeda Analyzer v2",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+
+  // ── GPU Passthrough ──────────────────────────────────────────
+  // This is the critical line that enables CUDA inside the container.
+  // Requires: Docker with NVIDIA Container Toolkit installed on host.
+  // Install toolkit: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+  "runArgs": ["--gpus", "all"],
+
+  // ── Host GPU requirements ────────────────────────────────────
+  "hostRequirements": {
+    "gpu": "optional"
+  },
+
+  // ── Container features ───────────────────────────────────────
+  "features": {
+    "ghcr.io/devcontainers/features/nvidia-cuda:1": {
+      "installCudaToolkit": true,
+      "cudaVersion": "12.1",
+      "cudnnVersion": "8"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  // ── Environment variables ────────────────────────────────────
+  "containerEnv": {
+    "TF_CPP_MIN_LOG_LEVEL": "3",
+    "PYTHONUNBUFFERED": "1",
+    "CUDA_VISIBLE_DEVICES": "all",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+
+  // ── VS Code extensions ───────────────────────────────────────
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-renderers",
+        "eamodio.gitlens",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        }
+      }
+    }
+  },
+
+  // ── Post-create: run installer ───────────────────────────────
+  // Automatically installs all dependencies (handles setuptools pin,
+  // MMCV prebuilt wheels, GPU detection) when container starts.
+  "postCreateCommand": "python scripts/install.py",
+
+  // ── Port forwards ────────────────────────────────────────────
+  "forwardPorts": [
+    6006,   // TensorBoard
+    8888    // Jupyter
+  ]
+}

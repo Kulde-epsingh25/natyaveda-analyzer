@@ -1,0 +1,68 @@
+name: NatyaVeda v2 CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Pin setuptools (critical — fixes mmcv + tf-hub)
+        run: pip install "setuptools>=69.5.1,<81" wheel
+
+      - name: Install PyTorch (CPU for CI)
+        run: pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install core dependencies
+        run: |
+          pip install numpy==1.26.4 scipy scikit-learn
+          pip install transformers huggingface-hub timm accelerate einops
+          pip install opencv-python-headless Pillow mediapipe
+          pip install pyyaml omegaconf matplotlib seaborn pytest pytest-cov
+          pip install scenedetect yt-dlp tqdm rich wandb
+
+      - name: Install mmengine (skip full mmpose for CI speed)
+        run: pip install mmengine>=0.10.0
+
+      - name: Install project
+        run: pip install -e . --no-deps
+
+      - name: Run tests
+        run: |
+          pytest tests/test_all.py -v --tb=short \
+            --cov=src --cov-report=xml \
+            -k "not requires_mmpose and not requires_gpu"
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install black isort flake8
+      - run: black --check --diff src/ tests/ scripts/
+      - run: isort --check-only src/ tests/ scripts/
+      - run: flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503

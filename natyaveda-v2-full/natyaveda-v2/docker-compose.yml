@@ -1,0 +1,162 @@
+x-common: &common
+  working_dir: /app
+  stdin_open: true
+  tty: true
+  environment:
+    - PYTHONUNBUFFERED=1
+  volumes:
+    - ./:/app
+    - ./data:/app/data
+    - ./weights:/app/weights
+    - ./outputs:/app/outputs
+    - ./reports:/app/reports
+
+x-gpu-common: &gpu-common
+  <<: *common
+  profiles: ["gpu"]
+  environment:
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  gpus: all
+
+services:
+  natyaveda-cpu:
+    <<: *common
+    profiles: ["cpu"]
+    build:
+      context: .
+      args:
+        NATYAVEDA_INSTALL_MODE: cpu
+    image: natyaveda:cpu
+    command: bash
+
+  natyaveda-gpu:
+    <<: *gpu-common
+    build:
+      context: .
+      args:
+        NATYAVEDA_INSTALL_MODE: cuda
+        NATYAVEDA_CUDA_TAG: "121"
+    image: natyaveda:cuda121
+    command: bash
+
+  setup-cpu:
+    <<: *common
+    profiles: ["cpu"]
+    image: natyaveda:cpu
+    command: >
+      bash -lc "
+      python scripts/download_weights.py;
+      python scripts/verify_setup.py
+      "
+
+  setup-gpu:
+    <<: *gpu-common
+    image: natyaveda:cuda121
+    command: >
+      bash -lc "
+      python scripts/download_weights.py;
+      python scripts/check_gpu.py;
+      python scripts/verify_setup.py
+      "
+
+  pipeline-cpu:
+    <<: *common
+    profiles: ["cpu"]
+    image: natyaveda:cpu
+    environment:
+      - NATYAVEDA_DEVICE=cpu
+      - NATYAVEDA_MODEL=danceformer-large
+      - NATYAVEDA_EPOCHS=100
+      - NATYAVEDA_USE_VIDEOMAE=1
+      - NATYAVEDA_DATA_IN=data/refined
+      - NATYAVEDA_DATA_PROCESSED=data/processed
+      - NATYAVEDA_SPLITS_OUT=data/splits
+      - NATYAVEDA_REPORT_DIR=reports
+      - NATYAVEDA_WEIGHTS_DIR=weights
+    command: bash scripts/docker_pipeline.sh
+
+  pipeline-gpu:
+    <<: *gpu-common
+    image: natyaveda:cuda121
+    environment:
+      - NATYAVEDA_DEVICE=cuda
+      - NATYAVEDA_MODEL=danceformer-large
+      - NATYAVEDA_EPOCHS=100
+      - NATYAVEDA_USE_VIDEOMAE=1
+      - NATYAVEDA_DATA_IN=data/refined
+      - NATYAVEDA_DATA_PROCESSED=data/processed
+      - NATYAVEDA_SPLITS_OUT=data/splits
+      - NATYAVEDA_REPORT_DIR=reports
+      - NATYAVEDA_WEIGHTS_DIR=weights
+    command: bash scripts/docker_pipeline.sh
+
+  infer-gpu:
+    <<: *gpu-common
+    image: natyaveda:cuda121
+    command: >
+      python scripts/infer.py
+      --video "data/smoke test/auto_kathak_nbMmkpfrM5Q_007.mp4"
+      --checkpoint weights/danceformer_best.pt
+      --output-video outputs/analyzed.mp4
+      --device cuda
+
+  infer-cpu:
+    <<: *common
+    profiles: ["cpu"]
+    image: natyaveda:cpu
+    command: >
+      python scripts/infer.py
+      --video "data/smoke test/auto_kathak_nbMmkpfrM5Q_007.mp4"
+      --checkpoint weights/danceformer_best.pt
+      --output-video outputs/analyzed.mp4
+      --device cpu
+
+  train-gpu:
+    <<: *gpu-common
+    image: natyaveda:cuda121
+    command: >
+      python scripts/train.py
+      --config config/config.yaml
+      --data data/splits
+      --model danceformer-large
+      --epochs 100
+      --device cuda
+
+  triplet-train-gpu:
+    <<: *gpu-common
+    image: natyaveda:cuda121
+    command: >
+      python scripts/train_triplet_embedding.py
+      --data data/splits
+      --epochs 20
+      --batch 32
+      --device cuda
+      --output weights/triplet_embedding_best.pt
+      --metrics-json reports/triplet_embedding_metrics.json
+
+  extract-gpu:
+    <<: *gpu-common
+    image: natyaveda:cuda121
+    command: >
+      python scripts/extract_features.py
+      --input data/refined
+      --output data/processed
+      --videomae
+      --device cuda
+
+  evaluate-gpu:
+    <<: *gpu-common
+    image: natyaveda:cuda121
+    command: >
+      python scripts/evaluate.py
+      --checkpoint weights/danceformer_best.pt
+      --test-data data/splits
+      --report-dir reports
+      --device cuda
+
+  verify-cpu:
+    <<: *common
+    profiles: ["cpu"]
+    image: natyaveda:cpu
+    command: python scripts/verify_setup.py

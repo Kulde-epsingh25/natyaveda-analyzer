@@ -1,0 +1,177 @@
+# ============================================================
+# NatyaVeda Analyzer v2 — Main Configuration
+# UPDATED: Cluster separation loss weights tuned for confusion matrix
+# ============================================================
+
+project:
+  name: natyaveda-analyzer
+  version: "2.0.0"
+  seed: 42
+
+device:
+  mode: "auto"
+  pose_tier: "auto"
+  vram_thresholds:
+    rtmw_x:        8.0
+    vitpose_huge:  6.0
+    vitpose_large: 4.0
+    vitpose_base:  2.0
+  fp16: "auto"
+
+# ──────────────────────────────────────────────────────────────
+# POSE EXTRACTION MODELS
+# ──────────────────────────────────────────────────────────────
+pose_extraction:
+  rtmw:
+    config: "td-hm_rtmw-x_8xb2-270e_coco-wholebody-384x288"
+    checkpoint: "weights/rtmw-x_simcc-cocktail14_pt-ucoco_270e-384x288-f840f204_20231122.pth"
+    keypoints: 133
+    detector_confidence: 0.30
+
+  vitpose:
+    huge:  "usyd-community/vitpose-plus-huge"
+    large: "usyd-community/vitpose-plus-large"
+    base:  "usyd-community/vitpose-plus-base"
+    person_detector: "facebook/detr-resnet-50"
+
+  movenet:
+    url: "https://tfhub.dev/google/movenet/singlepose/thunder/4"
+    keypoints: 17
+
+  ensemble:
+    enabled: true
+    blend_hands: true
+    blend_face:  false
+
+  min_body_confidence: 0.30
+  sample_fps: 25.0
+
+# ──────────────────────────────────────────────────────────────
+# HAND EXTRACTION — LOWERED thresholds to fix 0-frame problem
+# ──────────────────────────────────────────────────────────────
+hand_extraction:
+  model_complexity: 1
+  # LOWERED from 0.50 to 0.30 — was causing "both hands: 0 frames"
+  min_detection_confidence: 0.30
+  min_tracking_confidence: 0.30
+
+video_features:
+  enabled: true
+  model: "MCG-NJU/videomae-large"
+  clip_frames: 16
+  stride: 8
+  feature_dim: 1024
+
+refinement:
+  scene_threshold: 40.0           # raised from 27.0 (fewer tiny scenes)
+  min_dance_confidence: 0.35      # lowered from 0.65 (was too strict)
+  min_motion_threshold: 0.003     # lowered from 0.005
+  min_scene_duration_sec: 3.0
+  min_bbox_fraction: 0.05         # lowered from 0.15
+  person_detector: "facebook/detr-resnet-50"
+
+dataset:
+  clip_length_frames: 64
+  clip_stride_frames: 32
+  train_ratio: 0.80
+  val_ratio:   0.10
+  test_ratio:  0.10
+  augmentation:
+    random_flip:      true
+    noise_std:        0.01
+    scale_range:      [0.9, 1.1]
+    rotation_deg:     15.0
+    temporal_jitter:  3
+
+# ──────────────────────────────────────────────────────────────
+# MODEL — DanceFormer with projection head
+# ──────────────────────────────────────────────────────────────
+model:
+  name: "danceformer-large"
+  pose_embed_dim: 256
+  num_transformer_layers: 8
+  num_attention_heads: 8
+  ff_dim: 1024
+  transformer_dropout: 0.1
+  max_sequence_length: 128
+  num_dance_classes: 8
+  num_mudra_classes: 28
+  videomae_fusion: true
+  videomae_proj_dim: 1024
+  projection_head_dim: 128       # NEW: L2 projection for contrastive
+  body_part_attention: true      # NEW: boosts hands/feet weighting
+  dance_loss_weight: 1.0
+  mudra_loss_weight: 0.40
+
+# ──────────────────────────────────────────────────────────────
+# TRAINING — updated loss weights for cluster separation
+# ──────────────────────────────────────────────────────────────
+training:
+  epochs: 100
+  batch_size: 32
+  num_workers: 0
+  pin_memory: false
+
+  optimizer:
+    name: "adamw"
+    lr: 1.0e-4
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+
+  scheduler:
+    name: "cosine_warmup"
+    warmup_epochs: 10
+    min_lr: 1.0e-6
+
+  loss:
+    # Dance classification (focal)
+    dance_cls: "focal"
+    focal_gamma: 2.0
+    focal_alpha: 0.25
+    use_class_balanced_alpha: true
+    label_smoothing: 0.05        # slight smoothing helps generalization
+
+    # Supervised contrastive — pulls same-class together
+    supervised_contrastive_weight: 0.30
+    supervised_contrastive_temperature: 0.07
+
+    # Center loss — tighter intra-class clusters
+    center_loss_weight: 0.12
+
+    # Inter-class push — directly targets confused pairs from confusion matrix
+    # mohiniyattam↔kuchipudi (32%), kathak↔kathakali (19%), odissi↔bharatanatyam (14%)
+    center_inter_weight: 0.25    # RAISED from 0.10 — this is the key fix
+    center_inter_margin: 1.2     # cosine distance margin (0-2 scale)
+
+    # Angular orthogonal projection loss
+    angular_weight: 0.10         # NEW
+
+    # Mudra hand gesture loss — critical for mohiniyattam/kuchipudi/kathak
+    mudra_loss_weight: 0.40
+
+    # Triplet loss on hard pairs
+    triplet_loss_weight: 0.10
+    triplet_margin: 0.20
+
+  ema:
+    enabled: true
+    decay: 0.999
+
+  gradient:
+    clip_norm: 1.0
+    accumulation_steps: 1
+
+  logging:
+    use_wandb: false             # set true if wandb configured
+    project: "natyaveda-v2"
+    log_every_n_steps: 50
+
+paths:
+  data_raw:       "data/raw"
+  data_refined:   "data/refined"
+  data_processed: "data/processed"
+  data_splits:    "data/splits"
+  weights:        "weights"
+  logs:           "logs"
+  reports:        "reports"
+  outputs:        "outputs"
