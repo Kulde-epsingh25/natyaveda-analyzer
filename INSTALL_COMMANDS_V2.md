@@ -228,7 +228,7 @@ python scripts/download_data.py \
 
 # 2. Refine (remove non-dance segments)
 python scripts/refine_videos.py \
-    --input data/raw --output data/refined --device cuda  
+    --input data/raw --output data/refined --device cuda
 
 # 3. Extract features (auto-selects RTMW-x or VitPose based on GPU)
 python scripts/extract_features.py \
@@ -246,83 +246,7 @@ python scripts/train.py \
     --data data/splits \
     --model danceformer-large \
     --epochs 100 --device cuda
-Set-Location 'd:/New folder (2)/files (3)/natyaveda-v2-full/natyaveda-v2'
-$classes=@('bharatanatyam','kathak','odissi','kuchipudi','manipuri','mohiniyattam','sattriya','kathakali')
-$rows=@()
-$totalRef=0
-$totalPending=0
-foreach($c in $classes){
-  $refDir="data/refined/$c"
-  $procDir="data/processed/$c"
-  if(-not (Test-Path $refDir)){ continue }
-  $ref=Get-ChildItem $refDir -File | Where-Object { $_.Extension -in '.mp4','.avi','.mov','.mkv','.webm' }
-  $pending=0
-  foreach($v in $ref){
-    if(-not (Test-Path (Join-Path $procDir ($v.BaseName + '.npz')))){
-      $pending++
-    }
-  }
-  $refCount=$ref.Count
-  $totalRef+=$refCount
-  $totalPending+=$pending
-  $rows += [pscustomobject]@{class=$c; refined=$refCount; pending=$pending}
-}
-$rows | Format-Table -AutoSize
-Write-Host "TOTAL: $totalRef refined | $totalPending pending extraction"Set-Location 'd:/New folder (2)/files (3)/natyaveda-v2-full/natyaveda-v2'
-$classes=@('bharatanatyam','kathak','odissi','kuchipudi','manipuri','mohiniyattam','sattriya','kathakali')
-$rows=@()
-$totalRef=0
-$totalPending=0
 
-foreach($c in $classes){
-  $refDir="data/refined/$c"
-  $procDir="data/processed/$c"
-  if(-not (Test-Path $refDir)){ continue }
-
-  $ref=Get-ChildItem $refDir -File | Where-Object { $_.Extension -in '.mp4','.avi','.mov','.mkv','.webm' }
-  $pending=0
-
-  foreach($v in $ref){
-    if(-not (Test-Path (Join-Path $procDir ($v.BaseName + '.npz')))){
-      $pending++
-    }
-  }
-
-  $refCount=$ref.Count
-  $totalRef+=$refCount
-  $totalPending+=$pending
-  $rows += [pscustomobject]@{class=$c; refined=$refCount; pending=$pending}
-}
-
-$rows | Format-Table -AutoSize
-Write-Host "TOTAL: $totalRef refined | $totalPending pending extraction"Set-Location 'd:/New folder (2)/files (3)/natyaveda-v2-full/natyaveda-v2'
-$classes=@('bharatanatyam','kathak','odissi','kuchipudi','manipuri','mohiniyattam','sattriya','kathakali')
-$rows=@()
-$totalRef=0
-$totalPending=0
-
-foreach($c in $classes){
-  $refDir="data/refined/$c"
-  $procDir="data/processed/$c"
-  if(-not (Test-Path $refDir)){ continue }
-
-  $ref=Get-ChildItem $refDir -File | Where-Object { $_.Extension -in '.mp4','.avi','.mov','.mkv','.webm' }
-  $pending=0
-
-  foreach($v in $ref){
-    if(-not (Test-Path (Join-Path $procDir ($v.BaseName + '.npz')))){
-      $pending++
-    }
-  }
-
-  $refCount=$ref.Count
-  $totalRef+=$refCount
-  $totalPending+=$pending
-  $rows += [pscustomobject]@{class=$c; refined=$refCount; pending=$pending}
-}
-
-$rows | Format-Table -AutoSize
-Write-Host "TOTAL: $totalRef refined | $totalPending pending extraction"
 # 6. Evaluate
 python scripts/evaluate.py \
     --checkpoint weights/danceformer_best.pt \
@@ -356,7 +280,7 @@ pytest tests/test_all.py::TestTraining -v
 pytest tests/test_all.py::TestIsolator -v
 pytest tests/test_all.py::TestVisualizer -v
 pytest tests/test_all.py::TestTaxonomy -v
-pytest tests/test_all.py::TestKeypointUtils -v 
+pytest tests/test_all.py::TestKeypointUtils -v
 
 # Zero-data quick sanity check (no GPU, no video files needed)
 pytest tests/test_all.py -v -k "TestDanceFormer or TestPoseEmbed or TestTaxonomy"
@@ -393,7 +317,7 @@ python scripts/infer.py --video /path/to/dance.mp4 --checkpoint weights/dancefor
 
 # ── Test ──────────────────────────────────────────────────────
 pytest tests/ -v
-```  
+```
 
 ---
 
